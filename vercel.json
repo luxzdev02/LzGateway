@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/deposit-check", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/wd-check", "schedule": "0 0 * * *" }
+  ]
+}
