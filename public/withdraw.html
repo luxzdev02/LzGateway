@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Withdraw - Lz Gateway</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── TYPE SELECTOR ── */
+    .wtype-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}
+    .wtype-card{
+      border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:20px 14px;text-align:center;cursor:pointer;transition:var(--transition);
+      background:var(--surface);
+    }
+    .wtype-card:active{transform:scale(.95)}
+    .wtype-card.selected{border-color:var(--primary);background:var(--primary-xlight)}
+    .wtype-card .wt-icon{
+      width:52px;height:52px;border-radius:16px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;margin:0 auto 10px;
+      background:var(--bg2);color:var(--primary);transition:var(--transition);
+    }
+    .wtype-card.selected .wt-icon{background:var(--primary);color:#fff}
+    .wtype-card .wt-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px}
+    .wtype-card .wt-sub{font-size:11px;color:var(--text3);font-weight:600;line-height:1.4}
+    .wtype-card.selected .wt-title{color:var(--primary)}
+
+    /* ── EWALLET GRID ── */
+    .ewallet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+    .ew-opt{
+      border:1.5px solid var(--border);border-radius:var(--radius);
+      padding:14px 8px;text-align:center;cursor:pointer;transition:var(--transition);
+      background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:6px;
+    }
+    .ew-opt.selected{border-color:var(--primary);background:var(--primary-xlight)}
+    .ew-opt:active{transform:scale(.95)}
+
+    /* Logo wrappers */
+    .ew-logo{
+      width:44px;height:44px;border-radius:12px;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;margin-bottom:2px;
+    }
+    .ew-logo svg{width:44px;height:44px;display:block}
+    .ew-name{font-size:11px;font-weight:800;color:var(--text2)}
+    .ew-fee{font-size:9px;color:var(--text3);font-weight:600}
+    .ew-opt.selected .ew-name{color:var(--primary)}
+
+    /* ── FEE DETAIL ── */
+    .fee-detail{
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;
+    }
+    .fee-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px;font-weight:600}
+    .fee-row.total{border-top:1px dashed var(--border);margin-top:8px;padding-top:12px;font-size:14px;font-weight:800}
+    .fee-row.total .val{color:var(--primary)}
+    .fee-row .lbl{color:var(--text3)}
+    .fee-row .val{color:var(--text)}
+
+    /* ── DISCLAIMER ── */
+    .disclaimer-box{
+      background:#FFF7ED;border:1px solid #FED7AA;border-radius:var(--radius);
+      padding:12px 14px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start;
+    }
+    .disclaimer-box i{color:#EA580C;font-size:14px;flex-shrink:0;margin-top:1px}
+    .disclaimer-box p{font-size:11px;color:#9A3412;font-weight:600;line-height:1.5;margin:0}
+
+    /* ── PANELS ── */
+    .panel-section{display:none;animation:fadeUp .3s ease}
+    .panel-section.active{display:block}
+    .step-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+    .step-back{
+      width:36px;height:36px;border-radius:10px;background:var(--bg2);
+      border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      color:var(--text2);font-size:14px;transition:var(--transition);flex-shrink:0;
+    }
+    .step-back:active{transform:scale(.92)}
+    .step-title{font-size:16px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}
+    .step-title-icon{
+      width:32px;height:32px;border-radius:9px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:14px;flex-shrink:0;
+    }
+    .step-title-icon.instant{background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff}
+    .step-title-icon.manual{background:linear-gradient(135deg,#475569,#334155);color:#fff}
+
+    /* ── RESULT ── */
+    .status-card{text-align:center;padding:24px 16px}
+    .status-icon{
+      width:72px;height:72px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:30px;margin:0 auto 16px;
+    }
+    .status-icon.success{background:#DCFCE7;color:#16A34A}
+    .status-icon.processing{background:#EFF6FF;color:#2563EB;animation:pulse 2s infinite}
+    .status-icon.error{background:#FEE2E2;color:#DC2626}
+    .status-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px}
+    .status-sub{font-size:13px;color:var(--text3);font-weight:600;margin-bottom:20px}
+    .status-detail{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:left}
+    .sd-row{display:flex;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+    .sd-row:last-child{border-bottom:none}
+    .sd-row span:first-child{color:var(--text3)}
+    .sd-row span:last-child{color:var(--text);font-weight:700}
+
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+  </style>
+</head>
+<body>
+<div class="mobile-header">
+  <a href="/dashboard" class="header-btn"><i class="fa-solid fa-arrow-left"></i></a>
+  <span class="brand">Withdraw</span>
+  <div style="width:40px"></div>
+</div>
+
+<div class="main-content no-bottom" style="padding-bottom:100px">
+
+  <!-- Balance Card -->
+  <div class="card" style="background:linear-gradient(135deg,#0B1224,#1E3A5F);color:#fff;border:none;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Saldo Tersedia</div>
+    <div id="userBalance" style="font-size:28px;font-weight:900;margin-top:4px">Rp 0</div>
+    <div style="font-size:11px;opacity:.5;margin-top:6px;font-weight:600" id="userBalanceSub">Memuat saldo...</div>
+  </div>
+
+  <!-- ========== STEP 1: PILIH TIPE WD ========== -->
+  <div id="panelStep1" class="panel-section active">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-icon"><i class="fa-solid fa-money-bill-transfer"></i></div>
+        Pilih Metode Penarikan
+      </div>
+      <div class="wtype-grid">
+        <div class="wtype-card selected" id="btnInstant" onclick="selectType('instant')">
+          <div class="wt-icon"><i class="fa-solid fa-bolt"></i></div>
+          <div class="wt-title">WD Instan</div>
+          <div class="wt-sub">Proses 1–5 menit via H2H</div>
+        </div>
+        <div class="wtype-card" id="btnManual" onclick="selectType('manual')">
+          <div class="wt-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+          <div class="wt-title">WD Manual</div>
+          <div class="wt-sub">Konfirmasi admin, maks 1x24 jam</div>
+        </div>
+      </div>
+      <div id="typeAlert" style="margin-top:12px"></div>
+      <button class="btn btn-primary" style="margin-top:6px" onclick="goToStep2()">
+        <i class="fa-solid fa-arrow-right"></i> Lanjutkan
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== STEP 2A: WD INSTAN ========== -->
+  <div id="panelInstant" class="panel-section">
+    <div class="card">
+      <div class="step-header">
+        <button class="step-back" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+        <div class="step-title">
+          <div class="step-title-icon instant"><i class="fa-solid fa-bolt"></i></div>
+          Withdraw Instan
+        </div>
+      </div>
+
+      <div id="wdInstantAlert"></div>
+
+      <div class="form-group">
+        <label>Pilih E-Wallet Tujuan</label>
+        <div class="ewallet-grid">
+
+          <!-- GoPay -->
+          <div class="ew-opt selected" data-op="gopay" onclick="selectEwallet(this)">
+            <div class="ew-logo">
+              <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="gpGrad1" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#00A14B"/>
+                    <stop offset="1" stop-color="#35C779"/>
+                  </linearGradient>
+                </defs>
+                <rect width="44" height="44" rx="12" fill="url(#gpGrad1)"/>
+                <!-- GoPay G mark (Google-style G approximating Gojek) -->
+                <path fill="white" d="M22 10.5A11.5 11.5 0 1 0 33.5 22v-2.5H22v3.5h7.8A8.2 8.2 0 1 1 22 13.8a8.1 8.1 0 0 1 5.5 2.1l2.6-2.6A11.5 11.5 0 0 0 22 10.5Z"/>
+              </svg>
+            </div>
+            <div class="ew-name">GoPay</div>
+            <div class="ew-fee" id="feeGopay">Fee: Rp -</div>
+          </div>
+
+          <!-- OVO -->
+          <div class="ew-opt" data-op="ovo" onclick="selectEwallet(this)">
+            <div class="ew-logo">
+              <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="ovGrad1" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4B2B8B"/>
+                    <stop offset="1" stop-color="#6B3FAA"/>
+                  </linearGradient>
+                </defs>
+                <rect width="44" height="44" rx="12" fill="url(#ovGrad1)"/>
+                <!-- OVO circles: O circle V arc O circle -->
+                <circle cx="12" cy="22" r="5.5" stroke="white" stroke-width="2.5" fill="none"/>
+                <circle cx="32" cy="22" r="5.5" stroke="white" stroke-width="2.5" fill="none"/>
+                <!-- V shape in center -->
+                <polyline points="18.5,17 22,27 25.5,17" stroke="white" stroke-width="2.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="ew-name">OVO</div>
+            <div class="ew-fee" id="feeOvo">Fee: Rp -</div>
+          </div>
+
+          <!-- DANA -->
+          <div class="ew-opt" data-op="dana" onclick="selectEwallet(this)">
+            <div class="ew-logo">
+              <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="dnGrad1" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#118EEA"/>
+                    <stop offset="1" stop-color="#0070D4"/>
+                  </linearGradient>
+                </defs>
+                <rect width="44" height="44" rx="12" fill="url(#dnGrad1)"/>
+                <!-- DANA wordmark -->
+                <text x="22" y="27" text-anchor="middle"
+                      font-family="'Arial Rounded MT Bold','Arial Black',Arial,sans-serif"
+                      font-size="13" font-weight="900" letter-spacing="0.5"
+                      fill="white">DANA</text>
+              </svg>
+            </div>
+            <div class="ew-name">DANA</div>
+            <div class="ew-fee" id="feeDana">Fee: Rp -</div>
+          </div>
+
+        </div>
+        <input type="hidden" id="instantOperator" value="gopay">
+      </div>
+
+      <div class="form-group">
+        <label>Nomor HP Tujuan</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-phone icon"></i>
+          <input type="tel" id="instantPhone" placeholder="Contoh: 085135380497" inputmode="tel">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nominal Penarikan</label>
+        <div class="input-wrap">
+          <span class="prefix">Rp</span>
+          <input type="number" id="instantAmount" placeholder="Minimal 5.000" min="5000" inputmode="numeric" oninput="updateFeePreview()">
+        </div>
+      </div>
+
+      <!-- Fee Preview -->
+      <div class="fee-detail" id="feePreview" style="display:none">
+        <div class="fee-row">
+          <span class="lbl">Nominal ke penerima</span>
+          <span class="val" id="previewAmount">-</span>
+        </div>
+        <div class="fee-row">
+          <span class="lbl">Fee markup layanan</span>
+          <span class="val" id="previewMarkup">-</span>
+        </div>
+        <div class="fee-row">
+          <span class="lbl">Fee H2H provider</span>
+          <span class="val" id="previewH2hFee">-</span>
+        </div>
+        <div class="fee-row total">
+          <span class="lbl">Total dipotong dari saldo</span>
+          <span class="val" id="previewTotal">-</span>
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer-box">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <p><strong>Ketentuan Penting:</strong> Pastikan nomor HP tujuan sudah benar. Jika nomor salah dan dana sudah dikirim, <strong>bukan tanggung jawab kami</strong>. Kami tidak bertanggung jawab atas kesalahan nomor yang dimasukkan oleh pengguna.</p>
+      </div>
+
+      <button class="btn btn-primary" id="btnInstantSubmit" onclick="submitInstant()">
+        <i class="fa-solid fa-paper-plane"></i> Proses WD Instan
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== STEP 2B: WD MANUAL ========== -->
+  <div id="panelManual" class="panel-section">
+    <div class="card">
+      <div class="step-header">
+        <button class="step-back" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+        <div class="step-title">
+          <div class="step-title-icon manual"><i class="fa-solid fa-clipboard-list"></i></div>
+          Withdraw Manual
+        </div>
+      </div>
+
+      <div id="wdManualAlert"></div>
+
+      <div class="form-group">
+        <label>Metode E-Wallet</label>
+        <div class="ewallet-grid">
+
+          <!-- GoPay Manual -->
+          <div class="ew-opt selected" data-val="gopay" onclick="selectWallet(this)">
+            <div class="ew-logo">
+              <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="gpGrad2" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#00A14B"/>
+                    <stop offset="1" stop-color="#35C779"/>
+                  </linearGradient>
+                </defs>
+                <rect width="44" height="44" rx="12" fill="url(#gpGrad2)"/>
+                <path fill="white" d="M22 10.5A11.5 11.5 0 1 0 33.5 22v-2.5H22v3.5h7.8A8.2 8.2 0 1 1 22 13.8a8.1 8.1 0 0 1 5.5 2.1l2.6-2.6A11.5 11.5 0 0 0 22 10.5Z"/>
+              </svg>
+            </div>
+            <div class="ew-name">GoPay</div>
+            <div class="ew-fee">Manual</div>
+          </div>
+
+          <!-- OVO Manual -->
+          <div class="ew-opt" data-val="ovo" onclick="selectWallet(this)">
+            <div class="ew-logo">
+              <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="ovGrad2" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4B2B8B"/>
+                    <stop offset="1" stop-color="#6B3FAA"/>
+                  </linearGradient>
+                </defs>
+                <rect width="44" height="44" rx="12" fill="url(#ovGrad2)"/>
+                <circle cx="12" cy="22" r="5.5" stroke="white" stroke-width="2.5" fill="none"/>
+                <circle cx="32" cy="22" r="5.5" stroke="white" stroke-width="2.5" fill="none"/>
+                <polyline points="18.5,17 22,27 25.5,17" stroke="white" stroke-width="2.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="ew-name">OVO</div>
+            <div class="ew-fee">Manual</div>
+          </div>
+
+          <!-- DANA Manual -->
+          <div class="ew-opt" data-val="dana" onclick="selectWallet(this)">
+            <div class="ew-logo">
+              <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="dnGrad2" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#118EEA"/>
+                    <stop offset="1" stop-color="#0070D4"/>
+                  </linearGradient>
+                </defs>
+                <rect width="44" height="44" rx="12" fill="url(#dnGrad2)"/>
+                <text x="22" y="27" text-anchor="middle"
+                      font-family="'Arial Rounded MT Bold','Arial Black',Arial,sans-serif"
+                      font-size="13" font-weight="900" letter-spacing="0.5"
+                      fill="white">DANA</text>
+              </svg>
+            </div>
+            <div class="ew-name">DANA</div>
+            <div class="ew-fee">Manual</div>
+          </div>
+
+        </div>
+        <input type="hidden" id="manualOperator" value="gopay">
+      </div>
+
+      <div class="form-group">
+        <label>Nomor Tujuan</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-phone icon"></i>
+          <input type="tel" id="manualPhone" placeholder="Contoh: 085135380497" inputmode="tel">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nominal Penarikan (Min. Rp 5.000)</label>
+        <div class="input-wrap">
+          <span class="prefix">Rp</span>
+          <input type="number" id="manualAmount" placeholder="Minimal 5.000" min="5000" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="fee-detail">
+        <div class="fee-row">
+          <span class="lbl" style="display:flex;align-items:center;gap:8px">
+            <i class="fa-solid fa-circle-info" style="color:var(--primary)"></i>
+            Biaya Admin
+          </span>
+          <span class="val">Rp 2.000</span>
+        </div>
+        <div class="fee-row" style="font-size:11px;color:var(--text3)">
+          <span>Waktu proses</span>
+          <span>Maks. 1x24 jam</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btnManualSubmit" onclick="submitManual()">
+        <i class="fa-solid fa-paper-plane"></i> Ajukan Penarikan
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== STEP 3: HASIL ========== -->
+  <div id="panelResult" class="panel-section">
+    <div class="card">
+      <div class="status-card" id="resultContent"></div>
+      <button class="btn btn-primary" onclick="goHome()" style="margin-top:16px">
+        <i class="fa-solid fa-house"></i> Kembali ke Dashboard
+      </button>
+      <button class="btn" style="margin-top:10px;background:var(--bg2);color:var(--text);width:100%" onclick="resetForm()">
+        <i class="fa-solid fa-rotate-left"></i> Withdraw Lagi
+      </button>
+    </div>
+  </div>
+
+</div><!-- end main-content -->
+
+<nav class="bottom-nav">
+  <a href="/dashboard" class="bottom-nav-item"><i class="fa-solid fa-house"></i><span>Home</span></a>
+  <a href="/deposit" class="bottom-nav-center"><i class="fa-solid fa-plus"></i></a>
+  <a href="/riwayat" class="bottom-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+  <a href="/profile" class="bottom-nav-item"><i class="fa-solid fa-user"></i><span>Profil</span></a>
+</nav>
+
+<script>
+let currentUser = null;
+let selectedType = 'instant';
+let instantFees = {};
+let wdInstantId = null;
+let statusPollInterval = null;
+
+// Init
+try {
+  const s = localStorage.getItem('user');
+  if (!s) { window.location.href = '/'; }
+  currentUser = JSON.parse(s);
+  if (!currentUser?.id) throw new Error();
+  updateBalanceDisplay(currentUser.balance || 0);
+} catch(e) { localStorage.clear(); window.location.href='/'; }
+
+async function refreshBalance() {
+  try {
+    const r = await axios.get(`/api/user/${currentUser.id}`);
+    if (r.data) {
+      currentUser.balance = r.data.balance;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      updateBalanceDisplay(r.data.balance);
+    }
+  } catch(e) {}
+}
+
+function updateBalanceDisplay(bal) {
+  document.getElementById('userBalance').textContent = formatIDR(bal);
+  document.getElementById('userBalanceSub').textContent = `Saldo aktif — ${currentUser?.username}`;
+}
+
+function formatIDR(n) {
+  return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n||0);
+}
+
+async function loadInstantFees() {
+  try {
+    const r = await axios.get('/api/withdraw/instant/fee');
+    if (r.data?.fees) {
+      instantFees = r.data.fees;
+      const f = instantFees;
+      if (f.gopay) document.getElementById('feeGopay').textContent = `Fee: ${formatIDR(f.gopay.total_fee)}`;
+      if (f.ovo)   document.getElementById('feeOvo').textContent   = `Fee: ${formatIDR(f.ovo.total_fee)}`;
+      if (f.dana)  document.getElementById('feeDana').textContent  = `Fee: ${formatIDR(f.dana.total_fee)}`;
+    }
+  } catch(e) {}
+}
+loadInstantFees();
+refreshBalance();
+
+// ========== NAVIGATION ==========
+function showPanel(id) {
+  document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function selectType(type) {
+  selectedType = type;
+  document.getElementById('btnInstant').classList.toggle('selected', type==='instant');
+  document.getElementById('btnManual').classList.toggle('selected', type==='manual');
+}
+
+function goToStep2() {
+  if (selectedType === 'instant') showPanel('panelInstant');
+  else showPanel('panelManual');
+}
+
+function goBack() { clearStatusPoll(); showPanel('panelStep1'); }
+function goHome() { window.location.href = '/dashboard'; }
+function resetForm() { clearStatusPoll(); showPanel('panelStep1'); refreshBalance(); }
+
+// ========== EWALLET SELECTION ==========
+function selectEwallet(el) {
+  document.querySelectorAll('#panelInstant .ew-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('instantOperator').value = el.dataset.op;
+  updateFeePreview();
+}
+
+function selectWallet(el) {
+  document.querySelectorAll('#panelManual .ew-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('manualOperator').value = el.dataset.val;
+}
+
+// ========== FEE PREVIEW ==========
+function updateFeePreview() {
+  const amount = parseInt(document.getElementById('instantAmount').value) || 0;
+  const op = document.getElementById('instantOperator').value;
+  const feeData = instantFees[op];
+  const preview = document.getElementById('feePreview');
+
+  if (!amount || amount < 5000 || !feeData) { preview.style.display='none'; return; }
+
+  document.getElementById('previewAmount').textContent  = formatIDR(amount);
+  document.getElementById('previewMarkup').textContent  = formatIDR(feeData.markup_fee);
+  document.getElementById('previewH2hFee').textContent  = formatIDR(feeData.h2h_fee);
+  document.getElementById('previewTotal').textContent   = formatIDR(amount + feeData.total_fee);
+  preview.style.display = 'block';
+}
+
+// ========== SUBMIT INSTAN ==========
+async function submitInstant() {
+  const amount   = parseInt(document.getElementById('instantAmount').value);
+  const operator = document.getElementById('instantOperator').value;
+  const phone    = document.getElementById('instantPhone').value.trim();
+  const alertDiv = document.getElementById('wdInstantAlert');
+
+  alertDiv.innerHTML = '';
+
+  if (isNaN(amount)||amount < 5000) {
+    alertDiv.innerHTML='<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> Minimal penarikan Rp 5.000</div>';
+    return;
+  }
+  if (!phone) {
+    alertDiv.innerHTML='<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> Nomor HP tujuan wajib diisi</div>';
+    return;
+  }
+
+  const feeData = instantFees[operator];
+  const totalDeducted = feeData ? amount + feeData.total_fee : amount + 3000;
+
+  if (totalDeducted > currentUser.balance) {
+    alertDiv.innerHTML=`<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> Saldo tidak cukup. Dibutuhkan: ${formatIDR(totalDeducted)}, Saldo Anda: ${formatIDR(currentUser.balance)}</div>`;
+    return;
+  }
+
+  const btn = document.getElementById('btnInstantSubmit');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+  try {
+    const res = await axios.post('/api/withdraw/instant/create', {
+      user_id: currentUser.id,
+      amount: amount,
+      operator: operator,
+      account_number: phone
+    });
+
+    if (res.data.success) {
+      const wd = res.data.withdraw;
+      wdInstantId = wd.id;
+      currentUser.balance -= totalDeducted;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      updateBalanceDisplay(currentUser.balance);
+      showResultInstant(wd, 'processing');
+    }
+  } catch(e) {
+    const errMsg = e.response?.data?.error || 'Gagal memproses withdraw instan';
+    alertDiv.innerHTML=`<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> ${errMsg}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+function showResultInstant(wd, status) {
+  showPanel('panelResult');
+  const content = document.getElementById('resultContent');
+
+  let iconClass, iconHtml, title, sub;
+  if (status === 'success') {
+    iconClass='success'; iconHtml='<i class="fa-solid fa-circle-check"></i>';
+    title='WD Instan Berhasil'; sub='Dana sudah dikirim ke e-wallet tujuan.';
+  } else if (status === 'failed') {
+    iconClass='error'; iconHtml='<i class="fa-solid fa-circle-xmark"></i>';
+    title='WD Instan Gagal'; sub='Saldo Anda sudah dikembalikan.';
+  } else {
+    iconClass='processing'; iconHtml='<i class="fa-solid fa-spinner fa-spin"></i>';
+    title='Sedang Diproses'; sub='WD Instan biasanya selesai dalam 1–5 menit.';
+  }
+
+  content.innerHTML = `
+    <div class="status-icon ${iconClass}">${iconHtml}</div>
+    <div class="status-title">${title}</div>
+    <div class="status-sub">${sub}</div>
+    <div class="status-detail">
+      <div class="sd-row"><span>Tipe</span><span>WD Instan</span></div>
+      <div class="sd-row"><span>E-Wallet</span><span>${(wd.operator||'').toUpperCase()}</span></div>
+      <div class="sd-row"><span>Nomor Tujuan</span><span>${wd.account_number||'-'}</span></div>
+      <div class="sd-row"><span>Nominal Diterima</span><span>${formatIDR(wd.amount||0)}</span></div>
+      <div class="sd-row"><span>Fee Total</span><span>${formatIDR(wd.fee||0)}</span></div>
+      <div class="sd-row"><span>ID Transaksi</span><span style="font-size:11px">${(wd.id||'').slice(-12)}</span></div>
+    </div>
+    ${status==='processing'?`<div id="wdStatusPoll" style="margin-top:14px;font-size:12px;color:var(--text3);font-weight:600;text-align:center"><i class="fa-solid fa-circle-notch fa-spin"></i> Memantau status...</div>`:''}
+  `;
+
+  if (status === 'processing' && wdInstantId) startStatusPoll(wdInstantId);
+}
+
+function startStatusPoll(wdId) {
+  let pollCount = 0;
+  const maxPolls = 20;
+
+  statusPollInterval = setInterval(async () => {
+    pollCount++;
+    try {
+      const r = await axios.get(`/api/withdraw/instant/status/${wdId}`);
+      const d = r.data;
+      const pollEl = document.getElementById('wdStatusPoll');
+      const content = document.getElementById('resultContent');
+
+      if (d.status === 'success') {
+        clearStatusPoll();
+        await refreshBalance();
+        content.querySelector('.status-icon').className = 'status-icon success';
+        content.querySelector('.status-icon').innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        content.querySelector('.status-title').textContent = 'WD Instan Berhasil';
+        content.querySelector('.status-sub').textContent = 'Dana sudah dikirim ke e-wallet tujuan.';
+        if (pollEl) pollEl.remove();
+      } else if (d.status === 'failed') {
+        clearStatusPoll();
+        await refreshBalance();
+        content.querySelector('.status-icon').className = 'status-icon error';
+        content.querySelector('.status-icon').innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+        content.querySelector('.status-title').textContent = 'WD Instan Gagal';
+        content.querySelector('.status-sub').textContent = d.saldo_refunded ? 'Saldo dikembalikan ke akun Anda.' : 'Hubungi admin jika saldo belum kembali.';
+        if (pollEl) pollEl.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#DC2626"></i> Gagal: ${d.h2h_reason||'Provider error'}`;
+      } else {
+        if (pollEl) pollEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memantau status... (${pollCount}x)`;
+        if (pollCount >= maxPolls) {
+          clearStatusPoll();
+          if (pollEl) pollEl.innerHTML = '<i class="fa-solid fa-clock"></i> Timeout. Cek riwayat untuk update status.';
+        }
+      }
+    } catch(e) {
+      if (pollCount >= maxPolls) clearStatusPoll();
+    }
+  }, 15000);
+}
+
+function clearStatusPoll() {
+  if (statusPollInterval) { clearInterval(statusPollInterval); statusPollInterval = null; }
+}
+
+// ========== SUBMIT MANUAL ==========
+async function submitManual() {
+  const amount   = parseInt(document.getElementById('manualAmount').value);
+  const operator = document.getElementById('manualOperator').value;
+  const phone    = document.getElementById('manualPhone').value.trim();
+  const alertDiv = document.getElementById('wdManualAlert');
+
+  alertDiv.innerHTML = '';
+
+  if (isNaN(amount)||amount < 5000) {
+    alertDiv.innerHTML='<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> Minimal penarikan Rp 5.000</div>';
+    return;
+  }
+  if (amount > currentUser.balance) {
+    alertDiv.innerHTML=`<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> Saldo tidak mencukupi (${formatIDR(currentUser.balance)})</div>`;
+    return;
+  }
+  if (!phone) {
+    alertDiv.innerHTML='<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> Nomor tujuan wajib diisi</div>';
+    return;
+  }
+
+  const btn = document.getElementById('btnManualSubmit');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+  try {
+    const res = await axios.post('/api/withdraw/create', {
+      user_id: currentUser.id, amount, operator, account_number: phone
+    });
+    if (res.data.success) {
+      const wd = res.data.withdraw;
+      currentUser.balance -= amount;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      updateBalanceDisplay(currentUser.balance);
+      showResultManual(wd);
+    }
+  } catch(e) {
+    const errMsg = e.response?.data?.error || 'Gagal mengajukan penarikan';
+    alertDiv.innerHTML=`<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i> ${errMsg}</div>`;
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML=orig;
+  }
+}
+
+function showResultManual(wd) {
+  showPanel('panelResult');
+  const content = document.getElementById('resultContent');
+  content.innerHTML = `
+    <div class="status-icon success"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="status-title">Penarikan Diajukan</div>
+    <div class="status-sub">Admin akan memproses dalam 1x24 jam.</div>
+    <div class="status-detail">
+      <div class="sd-row"><span>Tipe</span><span>WD Manual</span></div>
+      <div class="sd-row"><span>E-Wallet</span><span>${(wd.operator||'').toUpperCase()}</span></div>
+      <div class="sd-row"><span>Nomor Tujuan</span><span>${wd.account_number||'-'}</span></div>
+      <div class="sd-row"><span>Nominal Withdraw</span><span>${formatIDR(wd.amount||0)}</span></div>
+      <div class="sd-row"><span>Biaya Admin</span><span>${formatIDR(wd.fee||2000)}</span></div>
+      <div class="sd-row"><span>Dana Diterima</span><span style="color:var(--success);font-weight:800">${formatIDR(wd.total_diterima||0)}</span></div>
+      <div class="sd-row"><span>ID Transaksi</span><span style="font-size:11px">${(wd.id||'').slice(-12)}</span></div>
+    </div>
+    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-top:14px;text-align:left">
+      <p style="font-size:11px;color:#1E40AF;font-weight:600;margin:0;display:flex;align-items:flex-start;gap:7px">
+        <i class="fa-solid fa-circle-info" style="margin-top:1px;flex-shrink:0"></i>
+        Penarikan akan diproses oleh admin. Pantau status di menu Riwayat.
+      </p>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
+
