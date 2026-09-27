@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Profil & API - Lz Gateway</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .profile-avatar{
+      width:72px;height:72px;border-radius:20px;
+      background:linear-gradient(135deg,var(--primary),var(--secondary));
+      display:flex;align-items:center;justify-content:center;
+      font-size:28px;font-weight:900;color:#fff;margin:0 auto 12px;
+      box-shadow:0 8px 24px rgba(37,99,235,.35);
+    }
+    .profile-name{font-size:18px;font-weight:800;text-align:center;margin-bottom:4px}
+    .profile-id{font-size:13px;color:var(--text3);text-align:center;font-weight:600}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid rgba(37,99,235,.06)}
+    .info-row:last-child{border-bottom:none}
+    .info-label{font-size:12px;font-weight:700;color:var(--text3)}
+    .info-value{font-size:14px;font-weight:700;color:var(--text)}
+    .menu-item{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:15px 18px;border-radius:var(--radius);
+      background:var(--surface);border:1px solid rgba(37,99,235,.06);
+      box-shadow:var(--shadow-sm);margin-bottom:10px;cursor:pointer;
+      transition:var(--transition);text-decoration:none;
+    }
+    .menu-item:active{transform:scale(.98)}
+    .menu-item-left{display:flex;align-items:center;gap:13px}
+    .menu-item-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .menu-item-title{font-size:14px;font-weight:700;color:var(--text)}
+    .menu-item-sub{font-size:11px;color:var(--text3);margin-top:1px;font-weight:500}
+    .menu-item-right{color:var(--text4);font-size:14px}
+  </style>
+</head>
+<body>
+<div class="mobile-header">
+  <a href="/dashboard" class="header-btn"><i class="fa-solid fa-arrow-left"></i></a>
+  <span class="brand">Profil</span>
+  <div style="width:40px"></div>
+</div>
+
+<div class="main-content no-bottom" style="padding-bottom:100px">
+
+  <!-- Profile Card -->
+  <div class="card" style="text-align:center;padding:28px 22px 22px">
+    <div class="profile-avatar" id="avatarLetter">U</div>
+    <div class="profile-name" id="profUser">Username</div>
+    <div class="profile-id" id="profId">#ID · Bergabung ...</div>
+    <div style="margin-top:14px">
+      <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Akun Aktif</span>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <div class="card-title"><div class="card-icon"><i class="fa-solid fa-chart-bar"></i></div>Statistik Akun</div>
+    <div class="info-row">
+      <span class="info-label">Saldo Saat Ini</span>
+      <span class="info-value text-primary" id="profBalance">Rp 0</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Tanggal Bergabung</span>
+      <span class="info-value" id="profJoin">—</span>
+    </div>
+  </div>
+
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-title"><div class="card-icon"><i class="fa-solid fa-key"></i></div>Developer API Key</div>
+    <p style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Gunakan kunci ini untuk integrasi H2H. Rahasiakan dan jangan bagikan kepada siapapun.</p>
+    <div class="api-box" style="margin-bottom:12px">
+      <input type="text" id="apiKey" readonly value="Loading...">
+      <button class="copy-btn" id="btnCopy"><i class="fa-solid fa-copy"></i> Salin</button>
+    </div>
+    <button class="btn btn-outline" id="btnRegen" style="margin-top:4px">
+      <i class="fa-solid fa-arrows-rotate"></i> Regenerate API Key
+    </button>
+  </div>
+
+  <!-- Menu -->
+  <a href="/docs" class="menu-item">
+    <div class="menu-item-left">
+      <div class="menu-item-icon" style="background:var(--primary-xlight);color:var(--primary)"><i class="fa-solid fa-book"></i></div>
+      <div><div class="menu-item-title">Dokumentasi API</div><div class="menu-item-sub">Panduan integrasi H2H</div></div>
+    </div>
+    <i class="fa-solid fa-chevron-right menu-item-right"></i>
+  </a>
+
+  <a href="/chat" class="menu-item">
+    <div class="menu-item-left">
+      <div class="menu-item-icon" style="background:#ECFDF5;color:#059669"><i class="fa-solid fa-headset"></i></div>
+      <div><div class="menu-item-title">Hubungi CS</div><div class="menu-item-sub">Chat dengan customer support</div></div>
+    </div>
+    <i class="fa-solid fa-chevron-right menu-item-right"></i>
+  </a>
+
+  <div class="menu-item" id="logoutBtn" style="border-color:rgba(239,68,68,.1)">
+    <div class="menu-item-left">
+      <div class="menu-item-icon" style="background:#FEF2F2;color:#DC2626"><i class="fa-solid fa-sign-out-alt"></i></div>
+      <div><div class="menu-item-title" style="color:#DC2626">Keluar Akun</div><div class="menu-item-sub">Logout dari sesi ini</div></div>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color:#DC2626"></i>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <a href="/dashboard" class="bottom-nav-item"><i class="fa-solid fa-house"></i><span>Home</span></a>
+  <a href="/deposit" class="bottom-nav-center"><i class="fa-solid fa-plus"></i></a>
+  <a href="/riwayat" class="bottom-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+  <a href="/profile" class="bottom-nav-item active"><i class="fa-solid fa-user"></i><span>Profil</span></a>
+</nav>
+
+<script>
+let currentUser = null;
+function formatIDR(n){ return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n||0); }
+
+async function loadProfile() {
+  const s = localStorage.getItem('user'); if(!s){window.location.href='/';return;}
+  currentUser = JSON.parse(s); if(!currentUser?.id){window.location.href='/';return;}
+  const letter = (currentUser.username||'U')[0].toUpperCase();
+  document.getElementById('avatarLetter').textContent = letter;
+  document.getElementById('profUser').textContent = currentUser.username;
+  document.getElementById('profId').textContent = '#'+currentUser.id+' · Bergabung '+new Date(currentUser.created_at||Date.now()).toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+  document.getElementById('profBalance').textContent = formatIDR(currentUser.balance||0);
+  document.getElementById('profJoin').textContent = new Date(currentUser.created_at||Date.now()).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('apiKey').value = currentUser.apiKey || 'Memuat...';
+
+  // FIX: ambil apiKey fresh dari server (login gak lagi ngirim balik apiKey demi keamanan)
+  try {
+    const res = await axios.get(`/api/user/${currentUser.id}`, { withCredentials: true });
+    if (res.data?.apiKey) {
+      currentUser.apiKey = res.data.apiKey;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      document.getElementById('apiKey').value = currentUser.apiKey;
+    }
+  } catch(e) {
+    console.error('Gagal ambil apiKey:', e);
+    const status = e.response?.status || 'no-response';
+    const msg = e.response?.data?.error || e.message || 'unknown';
+    document.getElementById('apiKey').value = `ERROR ${status}: ${msg}`;
+  }
+}
+
+document.getElementById('btnCopy').onclick = () => {
+  const key = document.getElementById('apiKey').value;
+  if (key==='Klik Regenerate') return;
+  navigator.clipboard.writeText(key);
+  const btn = document.getElementById('btnCopy');
+  btn.innerHTML='<i class="fa-solid fa-check"></i> Tersalin';
+  setTimeout(()=>btn.innerHTML='<i class="fa-solid fa-copy"></i> Salin',2000);
+};
+
+document.getElementById('btnRegen').onclick = async () => {
+  if (!confirm('Ganti API Key? Kunci lama tidak bisa digunakan lagi.')) return;
+  const btn = document.getElementById('btnRegen'); const orig = btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+  try {
+    const res = await axios.post('/api/regenerate-apikey',{user_id:currentUser.id});
+    if (res.data.success) {
+      document.getElementById('apiKey').value = res.data.apiKey;
+      currentUser.apiKey = res.data.apiKey;
+      localStorage.setItem('user',JSON.stringify(currentUser));
+      alert('✅ API Key baru berhasil dibuat!');
+    }
+  } catch(e) { alert('Gagal generate ulang'); }
+  finally { btn.disabled=false; btn.innerHTML=orig; }
+};
+
+document.getElementById('logoutBtn').onclick = () => {
+  if (confirm('Yakin ingin keluar?')) { localStorage.removeItem('user'); window.location.href='/login'; }
+};
+
+loadProfile();
+</script>
+</body>
+</html>
