@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Deposit QRIS - Lz Gateway</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="mobile-header">
+  <a href="/dashboard" class="header-btn"><i class="fa-solid fa-arrow-left"></i></a>
+  <span class="brand">Deposit QRIS</span>
+  <div style="width:40px"></div>
+</div>
+
+<div class="main-content no-bottom" style="padding-bottom:100px">
+  <div class="page-header">
+    <h1>Deposit Saldo</h1>
+    <p>Bayar via QRIS otomatis, saldo masuk instan</p>
+  </div>
+
+  <!-- Balance info -->
+  <div class="card" style="background:linear-gradient(135deg,var(--primary),#1E40AF);color:#fff;border:none">
+    <div style="font-size:11px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Saldo Anda Saat Ini</div>
+    <div id="disp_balance" style="font-size:28px;font-weight:900;margin-top:4px">Rp 0</div>
+  </div>
+
+  <!-- Form card -->
+  <div class="card" id="formCard">
+    <div class="card-title">
+      <div class="card-icon"><i class="fa-solid fa-qrcode"></i></div>
+      Buat Invoice QRIS
+    </div>
+
+    <div id="formAlert"></div>
+
+    <div class="form-group">
+      <label>Nominal Deposit (Rp 500 – Rp 1.000.000)</label>
+      <div class="input-wrap">
+        <span class="prefix">Rp</span>
+        <input type="number" id="amountInput" placeholder="Masukkan nominal" min="500" max="1000000" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="quick-amounts">
+      <div class="quick-btn" onclick="setAmount(10000)">10.000</div>
+      <div class="quick-btn" onclick="setAmount(20000)">20.000</div>
+      <div class="quick-btn" onclick="setAmount(50000)">50.000</div>
+      <div class="quick-btn" onclick="setAmount(100000)">100.000</div>
+      <div class="quick-btn" onclick="setAmount(200000)">200.000</div>
+      <div class="quick-btn" onclick="setAmount(500000)">500.000</div>
+    </div>
+
+    <button class="btn btn-primary" id="btnGen">
+      <i class="fa-solid fa-qrcode"></i> Buat Invoice
+    </button>
+  </div>
+
+  <!-- QRIS Area -->
+  <div class="card" id="qrisArea" style="display:none">
+    <div class="qris-container">
+      <div class="waiting-badge"><i class="fa-solid fa-clock"></i> Menunggu Pembayaran</div>
+      <div class="payment-timer" id="countdownTimer" style="display:none">
+        <i class="fa-regular fa-hourglass-half"></i> Kadaluarsa dalam: <span id="timer">59:59</span>
+      </div>
+      <div class="qr-frame">
+        <img id="qrImg" src="" alt="QRIS Code">
+      </div>
+      <div class="payment-detail">
+        <div class="payment-row"><span>ID Tagihan</span><span id="outId">#...</span></div>
+        <div class="payment-row"><span>Admin Fee</span><span id="outFee">Rp 0</span></div>
+        <div class="payment-row total"><span>Total Bayar</span><span id="outTotal">Rp 0</span></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success" id="btnCheck"><i class="fa-solid fa-rotate"></i> Sudah Bayar</button>
+        <button class="btn btn-ghost" id="btnCancel"><i class="fa-solid fa-ban"></i> Batal</button>
+      </div>
+      <p style="font-size:11px;color:var(--text4);margin-top:14px;text-align:center;line-height:1.6">
+        <i class="fa-solid fa-circle-info"></i> Jangan batalkan jika sudah membayar!<br>QRIS kadaluarsa dalam 1 jam.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="/dashboard" class="bottom-nav-item"><i class="fa-solid fa-house"></i><span>Home</span></a>
+  <a href="/deposit" class="bottom-nav-center"><i class="fa-solid fa-plus"></i></a>
+  <a href="/riwayat" class="bottom-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+  <a href="/profile" class="bottom-nav-item"><i class="fa-solid fa-user"></i><span>Profil</span></a>
+</nav>
+
+<script>
+let activeTrxId = null, countdownInterval = null, expiredAt = null, currentUser = null;
+try {
+  const s = localStorage.getItem('user');
+  if (!s) { window.location.href = '/'; }
+  currentUser = JSON.parse(s);
+  if (!currentUser?.id) throw new Error();
+  document.getElementById('disp_balance').textContent = new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(currentUser.balance||0);
+} catch(e) { localStorage.clear(); window.location.href='/'; }
+
+function setAmount(v) {
+  document.getElementById('amountInput').value = v;
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+  event.target.classList.add('selected');
+}
+
+function formatIDR(n){ return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n||0); }
+
+function resetDeposit() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  document.getElementById('qrisArea').style.display='none';
+  document.getElementById('formCard').style.display='block';
+  document.getElementById('amountInput').value='';
+  activeTrxId=null; expiredAt=null;
+}
+
+function startCountdown(ts) {
+  if (countdownInterval) clearInterval(countdownInterval);
+  const el = document.getElementById('timer');
+  const cont = document.getElementById('countdownTimer');
+  cont.style.display='flex';
+  countdownInterval = setInterval(() => {
+    const rem = ts - Date.now();
+    if (rem <= 0) {
+      clearInterval(countdownInterval); cont.style.display='none';
+      alert('⏰ Waktu habis! Silakan buat invoice baru.'); resetDeposit(); return;
+    }
+    const m = Math.floor(rem/60000), s = Math.floor((rem%60000)/1000);
+    el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+}
+
+document.getElementById('btnGen').onclick = async () => {
+  const amt = parseInt(document.getElementById('amountInput').value);
+  if (!amt||amt<500) { document.getElementById('formAlert').innerHTML='<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i>Minimal deposit Rp 500</div>'; return; }
+  if (amt>1000000) { document.getElementById('formAlert').innerHTML='<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i>Maksimal deposit Rp 1.000.000</div>'; return; }
+  const btn = document.getElementById('btnGen');
+  const orig = btn.innerHTML; btn.disabled=true; btn.classList.add('btn-loading');
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat Invoice...';
+  try {
+    const res = await axios.post('/api/depo/create',{user_id:currentUser.id,username:currentUser.username,nominal:amt});
+    if (res.data.success) {
+      const d = res.data.deposit; activeTrxId=d.id; expiredAt=d.expired_at;
+      document.getElementById('qrImg').src = d.qr_image;
+      document.getElementById('outId').textContent = '#'+d.id;
+      document.getElementById('outFee').textContent = formatIDR(d.fee);
+      document.getElementById('outTotal').textContent = formatIDR(d.total_payment);
+      document.getElementById('formCard').style.display='none';
+      document.getElementById('qrisArea').style.display='block';
+      if (expiredAt) startCountdown(expiredAt);
+      document.getElementById('qrisArea').scrollIntoView({behavior:'smooth',block:'start'});
+    } else {
+      document.getElementById('formAlert').innerHTML=`<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i>${res.data.error||'Gagal membuat invoice'}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('formAlert').innerHTML=`<div class="alert alert-error"><i class="fa-solid fa-circle-xmark"></i>${e.response?.data?.error||'Gagal terhubung ke server'}</div>`;
+  } finally { btn.disabled=false; btn.classList.remove('btn-loading'); btn.innerHTML=orig; }
+};
+
+document.getElementById('btnCheck').onclick = async () => {
+  if (!activeTrxId) return;
+  const btn=document.getElementById('btnCheck');const orig=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengecek...';
+  try {
+    const res = await axios.post('/api/depo/status',{deposit_id:activeTrxId,user_id:currentUser.id});
+    if (res.data.status==='success') { alert('✅ Pembayaran Berhasil! Saldo ditambahkan.'); window.location.href='/dashboard'; }
+    else if (res.data.status==='expired') { alert('⏰ Invoice kadaluarsa.'); resetDeposit(); }
+    else if (res.data.status==='canceled') { alert('❌ Invoice dibatalkan.'); resetDeposit(); }
+    else alert('⏳ '+(res.data.message||'Pembayaran belum terdeteksi'));
+  } catch(e) { alert('Gagal mengecek. Coba lagi.'); }
+  finally { btn.disabled=false; btn.innerHTML=orig; }
+};
+
+document.getElementById('btnCancel').onclick = async () => {
+  if (!activeTrxId) return;
+  if (!confirm('Batalkan transaksi ini?')) return;
+  const btn=document.getElementById('btnCancel');const orig=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>';
+  try {
+    const res = await axios.post('/api/depo/cancel',{deposit_id:activeTrxId,user_id:currentUser.id});
+    if (res.data.success) { alert('✅ Deposit dibatalkan.'); resetDeposit(); }
+    else alert('Gagal: '+(res.data.error||'Unknown'));
+  } catch(e) { alert('Gagal membatalkan.'); }
+  finally { btn.disabled=false; btn.innerHTML=orig; }
+};
+</script>
+</body>
+</html>
