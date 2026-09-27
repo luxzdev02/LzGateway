@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Admin Panel - Lz Gateway</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root{
+      --primary:#2563EB;--primary-dark:#1D4ED8;--secondary:#0EA5E9;
+      --success:#10B981;--danger:#EF4444;--warning:#F59E0B;
+      --bg:#F0F4FF;--surface:#FFFFFF;--surface2:#F8FAFF;
+      --border:#E2E8F0;--text:#0F172A;--text2:#334155;--text3:#64748B;--text4:#94A3B8;
+      --sidebar:#0B1224;--transition:all .28s cubic-bezier(.4,0,.2,1);
+      --radius:16px;--radius-sm:10px;--radius-lg:22px;
+      --shadow:0 6px 24px rgba(37,99,235,.10);
+      --bottom-nav-h:70px;--header-h:64px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    input,button,select,textarea{font-family:inherit}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes shimmer{0%{background-position:-468px 0}100%{background-position:468px 0}}
+    @keyframes glow{0%,100%{box-shadow:0 0 8px rgba(37,99,235,.2)}50%{box-shadow:0 0 24px rgba(37,99,235,.5)}}
+    @keyframes cardIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+    /* ===== LOGIN ===== */
+    .login-page{
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(160deg,#0B1224 0%,#1E3A5F 60%,#0B1224 100%);
+      padding:20px;
+    }
+    .login-card{
+      background:rgba(255,255,255,.04);
+      backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);
+      border-radius:28px;padding:40px 32px;width:100%;max-width:380px;
+      box-shadow:0 24px 60px rgba(0,0,0,.4);
+      animation:fadeUp .5s ease;
+    }
+    .login-logo{text-align:center;margin-bottom:32px}
+    .login-logo img{width:72px;height:72px;border-radius:20px;border:2px solid rgba(37,99,235,.5);box-shadow:0 8px 28px rgba(37,99,235,.3)}
+    .login-logo h2{font-size:22px;font-weight:900;color:#fff;margin-top:14px}
+    .login-logo p{font-size:13px;color:rgba(255,255,255,.4);margin-top:4px;font-weight:600}
+    .login-form-group{margin-bottom:16px}
+    .login-label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px}
+    .login-input{
+      width:100%;padding:14px 16px;border-radius:12px;
+      background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.1);
+      color:#fff;font-size:14px;font-weight:600;outline:none;
+      transition:var(--transition);
+    }
+    .login-input:focus{border-color:var(--primary);background:rgba(37,99,235,.15);box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+    .login-input::placeholder{color:rgba(255,255,255,.25)}
+    .login-btn{
+      width:100%;padding:14px;margin-top:4px;
+      background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+      color:#fff;border:none;border-radius:12px;
+      font-size:15px;font-weight:800;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:9px;
+      box-shadow:0 8px 28px rgba(37,99,235,.4);
+      transition:var(--transition);
+    }
+    .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(37,99,235,.5)}
+    .login-btn:active{transform:scale(.97)}
+    .login-error{color:#FC8181;font-size:13px;font-weight:600;text-align:center;margin-top:12px;display:none}
+
+    /* ===== ADMIN LAYOUT ===== */
+    .admin-wrap{display:none;min-height:100vh}
+    
+    /* Mobile header */
+    .adm-header{
+      position:fixed;top:0;left:0;right:0;height:var(--header-h);
+      background:var(--surface);border-bottom:1px solid rgba(37,99,235,.08);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 16px;z-index:900;box-shadow:0 2px 16px rgba(37,99,235,.06);
+    }
+    .adm-brand{font-size:16px;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .adm-header-right{display:flex;align-items:center;gap:10px}
+    .header-btn{width:38px;height:38px;border-radius:11px;background:rgba(37,99,235,.08);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:16px;cursor:pointer;border:none;transition:var(--transition)}
+    .header-btn:active{background:var(--primary);color:#fff}
+
+    /* Sidebar */
+    .adm-sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(11,18,36,.55);backdrop-filter:blur(4px);z-index:1100}
+    .adm-sidebar-overlay.active{display:block}
+    .adm-sidebar{
+      width:260px;background:var(--sidebar);
+      position:fixed;left:-260px;top:0;bottom:0;z-index:1200;
+      display:flex;flex-direction:column;overflow-y:auto;
+      transition:var(--transition);box-shadow:8px 0 40px rgba(0,0,0,.3);
+    }
+    .adm-sidebar.active{left:0}
+    .adm-sb-header{
+      padding:32px 20px 24px;text-align:center;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background:linear-gradient(180deg,rgba(37,99,235,.15) 0%,transparent 100%);
+      position:relative;
+    }
+    .adm-sb-logo{width:60px;height:60px;border-radius:16px;margin:0 auto 12px;display:block;border:2px solid rgba(37,99,235,.5);box-shadow:0 0 20px rgba(37,99,235,.3);object-fit:cover}
+    .adm-sb-brand{font-size:15px;font-weight:800;color:#fff}
+    .adm-sb-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;font-weight:600}
+    .adm-close-sb{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;border:none;transition:var(--transition)}
+    .adm-nav{padding:14px 12px;flex:1}
+    .adm-nav-item{
+      display:flex;align-items:center;gap:12px;padding:12px 14px;
+      border-radius:var(--radius-sm);color:rgba(255,255,255,.5);
+      font-size:14px;font-weight:600;margin-bottom:4px;
+      cursor:pointer;transition:var(--transition);
+    }
+    .adm-nav-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+    .adm-nav-item.active{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(37,99,235,.4)}
+    .adm-nav-item i{width:20px;text-align:center;font-size:16px;flex-shrink:0}
+    .adm-nav-divider{height:1px;background:rgba(255,255,255,.06);margin:10px 0}
+    .adm-logout-item{color:#FC8181 !important}
+    .adm-logout-item:hover{background:rgba(239,68,68,.1) !important}
+
+    /* Main */
+    .adm-main{padding:calc(var(--header-h)+20px) 16px 30px;max-width:700px;margin:0 auto;animation:fadeUp .4s ease}
+
+    /* Stats grid */
+    .adm-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px}
+    .adm-stat{
+      background:var(--surface);border-radius:var(--radius);padding:18px 16px;
+      border:1px solid rgba(37,99,235,.06);box-shadow:0 3px 12px rgba(37,99,235,.06);
+      position:relative;overflow:hidden;
+      animation:cardIn .5s ease both;
+    }
+    .adm-stat:nth-child(1){animation-delay:.05s}
+    .adm-stat:nth-child(2){animation-delay:.10s}
+    .adm-stat:nth-child(3){animation-delay:.15s}
+    .adm-stat:nth-child(4){animation-delay:.20s}
+    .adm-stat:nth-child(5){animation-delay:.25s}
+    .adm-stat:nth-child(6){animation-delay:.30s}
+    .adm-stat::after{content:'';position:absolute;right:-15px;bottom:-15px;width:70px;height:70px;border-radius:50%;background:rgba(37,99,235,.05)}
+    .adm-stat.blue{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .adm-stat.blue .adm-s-label{color:rgba(255,255,255,.7)}
+    .adm-stat.blue .adm-s-val{color:#fff}
+    .adm-stat.blue::after{background:rgba(255,255,255,.08)}
+    .adm-s-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:12px;background:rgba(37,99,235,.1);color:var(--primary)}
+    .adm-stat.blue .adm-s-icon{background:rgba(255,255,255,.15);color:#fff}
+    .adm-s-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
+    .adm-s-val{font-size:20px;font-weight:900;color:var(--text)}
+    .adm-s-trend{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;margin-top:6px}
+    .trend-up{color:var(--success)}
+    .trend-down{color:var(--danger)}
+
+    /* Charts */
+    .chart-card{background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid rgba(37,99,235,.06);box-shadow:0 3px 12px rgba(37,99,235,.06);margin-bottom:14px}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .chart-title{font-size:14px;font-weight:800;color:var(--text)}
+    canvas{max-height:220px}
+
+    /* Recent activity */
+    .act-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(37,99,235,.04)}
+    .act-item:last-child{border-bottom:none}
+    .act-dot{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+    .act-dot.dep{background:rgba(37,99,235,.1);color:var(--primary)}
+    .act-dot.wd{background:#F1F5F9;color:#475569}
+    .act-dot.reg{background:#ECFDF5;color:#059669}
+    .act-body{flex:1;min-width:0}
+    .act-title{font-size:13px;font-weight:700;color:var(--text)}
+    .act-sub{font-size:11px;color:var(--text4);margin-top:1px;font-weight:500}
+    .act-right{text-align:right;flex-shrink:0}
+    .act-amount{font-size:13px;font-weight:800}
+    .act-amount.plus{color:var(--success)}
+    .act-amount.minus{color:var(--danger)}
+
+    /* Tables */
+    .tab-card{background:var(--surface);border-radius:var(--radius);border:1px solid rgba(37,99,235,.06);box-shadow:0 3px 12px rgba(37,99,235,.06);margin-bottom:14px;overflow:hidden}
+    .tab-card-header{padding:18px 18px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--border)}
+    .tab-card-title{font-size:15px;font-weight:800;color:var(--text)}
+    .search-inp{background:var(--surface2);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--text);outline:none;width:180px;transition:var(--transition)}
+    .search-inp:focus{border-color:var(--primary);width:200px}
+    .filter-pills{display:flex;gap:6px;flex-wrap:wrap}
+    .filter-pill{padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;background:var(--surface);cursor:pointer;font-size:12px;font-weight:700;color:var(--text3);transition:var(--transition)}
+    .filter-pill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .tbl-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{padding:11px 14px;text-align:left;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;background:var(--surface2);border-bottom:1px solid var(--border)}
+    td{padding:12px 14px;border-bottom:1px solid rgba(37,99,235,.04);font-weight:600;color:var(--text2)}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--surface2)}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:700}
+    .bg-success{background:#D1FAE5;color:#059669}
+    .bg-pending{background:#FEF3C7;color:#B45309}
+    .bg-danger,.bg-expired,.bg-canceled,.bg-failed{background:#FEE2E2;color:#B91C1C}
+    .action-btn{padding:5px 10px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;margin-right:4px;transition:var(--transition)}
+    .btn-add{background:#D1FAE5;color:#059669}
+    .btn-sub{background:#FEE2E2;color:#DC2626}
+    .action-btn:active{transform:scale(.93)}
+
+    /* Modal */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(11,18,36,.6);backdrop-filter:blur(8px);z-index:2000;align-items:center;justify-content:center;padding:20px}
+    .modal-bg.active{display:flex;animation:fadeIn .2s ease}
+    .modal-box{background:var(--surface);border-radius:24px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 24px 60px rgba(0,0,0,.2);animation:fadeUp .3s ease}
+    .modal-title{font-size:18px;font-weight:800;margin-bottom:6px}
+    .modal-sub{font-size:13px;color:var(--text3);margin-bottom:20px;font-weight:500}
+    .modal-input{width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:700;outline:none;margin-bottom:18px;transition:var(--transition)}
+    .modal-input:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(37,99,235,.08)}
+    .modal-btns{display:flex;gap:10px}
+    .mbtn{flex:1;padding:12px;border-radius:var(--radius-sm);border:none;font-size:14px;font-weight:700;cursor:pointer;transition:var(--transition)}
+    .mbtn-confirm{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .mbtn-cancel{background:var(--surface2);color:var(--text3);border:1.5px solid var(--border)}
+
+    /* Tabs section */
+    .adm-tab-content{display:none;animation:fadeUp .3s ease}
+    .adm-tab-content.active{display:block}
+
+    /* Progress bar */
+    .prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:8px}
+    .prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--primary),var(--secondary));transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+    /* Skeleton */
+    .skeleton{background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:8px}
+
+    @media(min-width:640px){
+      .adm-stats{grid-template-columns:repeat(3,1fr)}
+      .adm-main{max-width:900px;padding-left:24px;padding-right:24px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== LOGIN PAGE ===== -->
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="https://files.catbox.moe/55tni5.png" alt="Logo">
+      <h2>Admin Panel</h2>
+      <p>Lz Gateway H2H System</p>
+    </div>
+    <div class="login-form-group">
+      <label class="login-label">Username</label>
+      <input class="login-input" type="text" id="adminUsername" placeholder="Admin username" autocomplete="username">
+    </div>
+    <div class="login-form-group">
+      <label class="login-label">Password</label>
+      <input class="login-input" type="password" id="adminPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="adminLogin()"><i class="fa-solid fa-shield-halved"></i> Masuk Admin</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN PANEL ===== -->
+<div id="adminPanel" class="admin-wrap">
+
+  <!-- Header -->
+  <div class="adm-header">
+    <button class="header-btn" id="openAdmSidebar"><i class="fa-solid fa-bars-staggered"></i></button>
+    <span class="adm-brand">Admin Panel</span>
+    <div class="adm-header-right">
+      <span style="font-size:11px;font-weight:700;color:var(--text3)" id="admClock"></span>
+      <button class="header-btn" style="color:var(--danger)" onclick="adminLogout()"><i class="fa-solid fa-power-off"></i></button>
+    </div>
+  </div>
+
+  <!-- Sidebar Overlay -->
+  <div class="adm-sidebar-overlay" id="admOverlay"></div>
+
+  <!-- Sidebar -->
+  <div class="adm-sidebar" id="admSidebar">
+    <div class="adm-sb-header">
+      <button class="adm-close-sb" id="closeAdmSidebar"><i class="fa-solid fa-xmark"></i></button>
+      <img src="https://files.catbox.moe/55tni5.png" alt="Logo" class="adm-sb-logo">
+      <div class="adm-sb-brand">Lz Gateway</div>
+      <div class="adm-sb-sub">Admin Dashboard</div>
+    </div>
+    <div class="adm-nav">
+      <div class="adm-nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></div>
+      <div class="adm-nav-item" data-tab="users" onclick="switchTab('users')"><i class="fa-solid fa-users"></i><span>Kelola User</span></div>
+      <div class="adm-nav-item" data-tab="deposits" onclick="switchTab('deposits')"><i class="fa-solid fa-wallet"></i><span>Riwayat Deposit</span></div>
+      <div class="adm-nav-item" data-tab="withdrawals" onclick="switchTab('withdrawals')"><i class="fa-solid fa-money-bill-transfer"></i><span>Riwayat Penarikan</span></div>
+      <div class="adm-nav-divider"></div>
+      <div class="adm-nav-item adm-logout-item" onclick="adminLogout()"><i class="fa-solid fa-sign-out-alt"></i><span>Logout</span></div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="adm-main">
+
+    <!-- ===== DASHBOARD TAB ===== -->
+    <div id="tabDashboard" class="adm-tab-content active">
+      <div style="margin-bottom:20px;animation:fadeUp .4s ease">
+        <h1 style="font-size:20px;font-weight:900;color:var(--text)">Dashboard</h1>
+        <p style="font-size:12px;color:var(--text3);margin-top:2px;font-weight:600">Overview sistem secara real-time</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="adm-stats" id="statsGrid">
+        <div class="adm-stat blue">
+          <div class="adm-s-icon"><i class="fa-solid fa-wallet"></i></div>
+          <div class="adm-s-label">Total Deposit</div>
+          <div class="adm-s-val" id="statDepositTotal">—</div>
+          <div class="adm-s-trend" id="trendDeposit"><i class="fa-solid fa-arrow-up"></i><span>Loading...</span></div>
+        </div>
+        <div class="adm-stat">
+          <div class="adm-s-icon" style="background:#FEE2E2;color:#DC2626"><i class="fa-solid fa-arrow-up-from-bracket"></i></div>
+          <div class="adm-s-label">Total Withdraw</div>
+          <div class="adm-s-val" id="statWithdrawTotal">—</div>
+          <div class="adm-s-trend trend-down" id="trendWithdraw"><i class="fa-solid fa-minus"></i><span>—</span></div>
+        </div>
+        <div class="adm-stat">
+          <div class="adm-s-icon" style="background:#ECFDF5;color:#059669"><i class="fa-solid fa-users"></i></div>
+          <div class="adm-s-label">Total User</div>
+          <div class="adm-s-val" id="statUsers">—</div>
+        </div>
+        <div class="adm-stat">
+          <div class="adm-s-icon" style="background:#FEF3C7;color:#D97706"><i class="fa-solid fa-coins"></i></div>
+          <div class="adm-s-label">Saldo Mengendap</div>
+          <div class="adm-s-val" id="statFloating">—</div>
+        </div>
+        <div class="adm-stat">
+          <div class="adm-s-icon" style="background:#EDE9FE;color:#7C3AED"><i class="fa-solid fa-receipt"></i></div>
+          <div class="adm-s-label">Transaksi Hari Ini</div>
+          <div class="adm-s-val" id="statToday">—</div>
+        </div>
+        <div class="adm-stat">
+          <div class="adm-s-icon" style="background:#E0F2FE;color:#0284C7"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="adm-s-label">Success Rate</div>
+          <div class="adm-s-val" id="statSuccessRate">—</div>
+          <div class="prog-bar"><div class="prog-fill" id="successProg" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title"><i class="fa-solid fa-chart-line" style="color:var(--primary);margin-right:8px"></i>Deposit Harian (7 Hari)</div>
+        </div>
+        <canvas id="depositChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title"><i class="fa-solid fa-chart-bar" style="color:#EF4444;margin-right:8px"></i>Withdraw Harian (7 Hari)</div>
+        </div>
+        <canvas id="withdrawChart"></canvas>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);margin-right:8px"></i>Aktivitas Terbaru</div>
+          <span style="font-size:11px;font-weight:700;color:var(--success)"><i class="fa-solid fa-circle" style="font-size:8px;animation:pulse 2s infinite"></i> Live</span>
+        </div>
+        <div id="recentActivity"><div class="skeleton" style="height:48px;margin-bottom:8px;border-radius:10px"></div><div class="skeleton" style="height:48px;margin-bottom:8px;border-radius:10px"></div><div class="skeleton" style="height:48px;border-radius:10px"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== USERS TAB ===== -->
+    <div id="tabUsers" class="adm-tab-content">
+      <div style="margin-bottom:20px">
+        <h1 style="font-size:20px;font-weight:900;color:var(--text)">Kelola User</h1>
+        <p style="font-size:12px;color:var(--text3);margin-top:2px;font-weight:600">Manajemen saldo dan akun pengguna</p>
+      </div>
+      <div class="tab-card">
+        <div class="tab-card-header">
+          <div class="tab-card-title">Daftar Pengguna</div>
+          <input class="search-inp" type="text" id="searchUser" placeholder="🔍 Cari username..." oninput="filterUsers()">
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Username</th><th>Saldo</th><th>Aksi</th></tr></thead>
+            <tbody id="usersList"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DEPOSITS TAB ===== -->
+    <div id="tabDeposits" class="adm-tab-content">
+      <div style="margin-bottom:20px">
+        <h1 style="font-size:20px;font-weight:900;color:var(--text)">Riwayat Deposit</h1>
+        <p style="font-size:12px;color:var(--text3);margin-top:2px;font-weight:600">Semua transaksi deposit pengguna</p>
+      </div>
+      <div class="tab-card">
+        <div class="tab-card-header">
+          <div class="tab-card-title">Transaksi Deposit</div>
+          <div class="filter-pills">
+            <div class="filter-pill active" data-f="all" onclick="setDepFilter(this,'all')">Semua</div>
+            <div class="filter-pill" data-f="success" onclick="setDepFilter(this,'success')">Success</div>
+            <div class="filter-pill" data-f="pending" onclick="setDepFilter(this,'pending')">Pending</div>
+            <div class="filter-pill" data-f="expired" onclick="setDepFilter(this,'expired')">Expired</div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>User</th><th>Jumlah</th><th>Total Bayar</th><th>Status</th><th>Tanggal</th></tr></thead>
+            <tbody id="depositsList"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== WITHDRAWALS TAB ===== -->
+    <div id="tabWithdrawals" class="adm-tab-content">
+      <div style="margin-bottom:20px">
+        <h1 style="font-size:20px;font-weight:900;color:var(--text)">Riwayat Penarikan</h1>
+        <p style="font-size:12px;color:var(--text3);margin-top:2px;font-weight:600">Semua transaksi penarikan pengguna</p>
+      </div>
+      <div class="tab-card">
+        <div class="tab-card-header">
+          <div class="tab-card-title">Transaksi Penarikan</div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>User</th><th>Jumlah</th><th>Fee</th><th>Diterima</th><th>Operator</th><th>No. Tujuan</th><th>Status</th><th>Tanggal</th></tr></thead>
+            <tbody id="withdrawalsList"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /adm-main -->
+</div><!-- /adminPanel -->
+
+<!-- Modal Saldo -->
+<div class="modal-bg" id="balanceModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Tambah Saldo</div>
+    <div class="modal-sub">User: <strong id="modalUsername">—</strong></div>
+    <input class="modal-input" type="number" id="modalAmount" placeholder="Nominal (Rp)">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-confirm" id="modalConfirmBtn">Konfirmasi</button>
+      <button class="mbtn mbtn-cancel" onclick="closeModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminToken = null, allUsers = [], allDeposits = [], allWithdrawals = [];
+let depositFilter = 'all', depositChart, withdrawChart;
+let modalUser = null, modalAction = null, modalUserId = null;
+
+// Clock
+setInterval(() => {
+  document.getElementById('admClock').textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// Sidebar toggle
+document.getElementById('openAdmSidebar').onclick = () => { document.getElementById('admSidebar').classList.add('active'); document.getElementById('admOverlay').classList.add('active'); };
+document.getElementById('closeAdmSidebar').onclick = () => { document.getElementById('admSidebar').classList.remove('active'); document.getElementById('admOverlay').classList.remove('active'); };
+document.getElementById('admOverlay').onclick = () => { document.getElementById('admSidebar').classList.remove('active'); document.getElementById('admOverlay').classList.remove('active'); };
+
+// ===== LOGIN =====
+async function adminLogin() {
+  const username = document.getElementById('adminUsername').value;
+  const password = document.getElementById('adminPassword').value;
+  if (!username || !password) { showErr('Isi semua field!'); return; }
+  const btn = document.querySelector('.login-btn');
+  const orig = btn.innerHTML; btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memverifikasi...';
+  try {
+    const res = await axios.post('/api/admin/login', { username, password });
+    if (res.data.success) {
+      adminToken = res.data.adminToken;
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('adminPanel').style.display = 'block';
+      loadDashboard();
+    } else { showErr(res.data.error || 'Login gagal'); }
+  } catch(e) { showErr(e.response?.data?.error || 'Terjadi kesalahan'); }
+  finally { btn.disabled=false; btn.innerHTML=orig; }
+}
+function showErr(msg) { const el = document.getElementById('loginError'); el.style.display='block'; el.textContent=msg; }
+function adminLogout() { if(confirm('Yakin logout?')){adminToken=null;document.getElementById('adminPanel').style.display='none';document.getElementById('loginPage').style.display='flex';} }
+
+// Enter login
+['adminUsername','adminPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', e => { if(e.key==='Enter') adminLogin(); });
+});
+
+// ===== TAB SWITCH =====
+function switchTab(tab) {
+  document.querySelectorAll('.adm-tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.adm-nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('admSidebar').classList.remove('active');
+  document.getElementById('admOverlay').classList.remove('active');
+  if (tab==='dashboard') loadDashboard();
+  if (tab==='users') loadUsers();
+  if (tab==='deposits') loadDeposits();
+  if (tab==='withdrawals') loadWithdrawals();
+}
+
+function formatIDR(n){ return 'Rp'+Number(n||0).toLocaleString('id-ID'); }
+
+// ===== ANIMATED COUNTER =====
+function animateCount(el, target, isRupiah=false, duration=800) {
+  const start = 0, startTime = performance.now();
+  function update(time) {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 2);
+    const current = Math.floor(ease * target);
+    el.textContent = isRupiah ? formatIDR(current) : current.toLocaleString('id-ID');
+    if (progress < 1) requestAnimationFrame(update);
+    else el.textContent = isRupiah ? formatIDR(target) : target.toLocaleString('id-ID');
+  }
+  requestAnimationFrame(update);
+}
+
+// ===== LOAD DASHBOARD (dengan limit & error handling) =====
+async function loadDashboard() {
+  try {
+    // Tampilkan loading sementara
+    document.getElementById('statDepositTotal').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    document.getElementById('statWithdrawTotal').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    document.getElementById('statUsers').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    document.getElementById('statFloating').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    document.getElementById('statToday').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    document.getElementById('statSuccessRate').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
+    const [usersRes, depositsRes, withdrawalsRes] = await Promise.all([
+      axios.get('/api/admin/listuser?limit=100', { headers: { 'x-api-key': adminToken } }),
+      axios.get('/api/admin/deposit/list?limit=500', { headers: { 'x-api-key': adminToken } }),
+      axios.get('/api/admin/withdrawals/list?limit=500', { headers: { 'x-api-key': adminToken } })
+    ]);
+    
+    const users = usersRes.data.data || [];
+    let deposits = depositsRes.data.data || [];
+    let withdrawals = withdrawalsRes.data.data || [];
+    
+    // Filter data yang created_at valid (number)
+    deposits = deposits.filter(d => !isNaN(new Date(d.created_at).getTime()));
+    withdrawals = withdrawals.filter(w => !isNaN(new Date(w.created_at).getTime()));
+    
+    // Simpan ke global
+    allDeposits = deposits;
+    allWithdrawals = withdrawals;
+    
+    const totalDep = deposits.filter(d=>d.status==='success').reduce((s,d)=>s+(d.amount||0),0);
+    const totalWd = withdrawals.filter(w=>w.status==='success').reduce((s,w)=>s+(w.amount||0),0);
+    const totalBal = users.reduce((s,u)=>s+(u.balance||0),0);
+    
+    // Today trx
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayTrx = [...deposits, ...withdrawals].filter(t=>new Date(t.created_at).getTime() >= today.getTime()).length;
+    
+    // Success rate
+    const total = deposits.length;
+    const success = deposits.filter(d=>d.status==='success').length;
+    const rate = total ? Math.round(success/total*100) : 0;
+    
+    // Trend (compare last 7 days vs prev 7 days)
+    const now = Date.now();
+    const d7 = now - 7*24*60*60*1000;
+    const d14 = now - 14*24*60*60*1000;
+    const last7 = deposits.filter(d=>d.status==='success'&&new Date(d.created_at).getTime()>=d7).reduce((s,d)=>s+(d.amount||0),0);
+    const prev7 = deposits.filter(d=>d.status==='success'&&new Date(d.created_at).getTime()>=d14&&new Date(d.created_at).getTime()<d7).reduce((s,d)=>s+(d.amount||0),0);
+    const trend = prev7===0 ? (last7>0?100:0) : ((last7-prev7)/prev7*100).toFixed(1);
+    
+    animateCount(document.getElementById('statDepositTotal'), totalDep, true);
+    animateCount(document.getElementById('statWithdrawTotal'), totalWd, true);
+    animateCount(document.getElementById('statUsers'), users.length);
+    animateCount(document.getElementById('statFloating'), totalBal, true);
+    animateCount(document.getElementById('statToday'), todayTrx);
+    animateCount(document.getElementById('statSuccessRate'), rate);
+    
+    // Progress bar
+    setTimeout(() => { document.getElementById('successProg').style.width = rate+'%'; }, 300);
+    
+    const trendEl = document.getElementById('trendDeposit');
+    trendEl.className = 'adm-s-trend ' + (trend>=0?'trend-up':'trend-down');
+    trendEl.innerHTML = `<i class="fa-solid fa-arrow-${trend>=0?'up':'down'}"></i><span>${Math.abs(trend)}% vs minggu lalu</span>`;
+    
+    updateCharts(deposits.slice(0,200), withdrawals.slice(0,200));
+    renderRecentActivity(deposits.slice(0,100), withdrawals.slice(0,100), users.slice(0,50));
+    
+  } catch(e) { 
+    console.error('Dashboard error:', e);
+    document.getElementById('statsGrid').innerHTML = '<div class="adm-stat" style="grid-column:1/-1;text-align:center;color:red;">Gagal memuat data dashboard. Periksa koneksi atau login ulang.</div>';
+  }
+}
+
+// ===== CHARTS (sama, tidak perlu diubah banyak) =====
+function updateCharts(deposits, withdrawals) {
+  const days = [], depData = [], wdData = [];
+  for (let i=6;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const next = new Date(d); next.setDate(next.getDate()+1);
+    days.push(d.toLocaleDateString('id-ID',{day:'numeric',month:'short'}));
+    depData.push(deposits.filter(x=>x.status==='success'&&new Date(x.created_at).getTime()>=d.getTime()&&new Date(x.created_at).getTime()<next.getTime()).reduce((s,x)=>s+(x.amount||0),0));
+    wdData.push(withdrawals.filter(x=>x.status==='success'&&new Date(x.created_at).getTime()>=d.getTime()&&new Date(x.created_at).getTime()<next.getTime()).reduce((s,x)=>s+(x.amount||0),0));
+  }
+  const chartDefaults = { responsive:true, maintainAspectRatio:true, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'Rp'+Number(v).toLocaleString('id-ID')},grid:{color:'rgba(37,99,235,.06)'}},x:{grid:{display:false}}} };
+  
+  if (depositChart) depositChart.destroy();
+  depositChart = new Chart(document.getElementById('depositChart').getContext('2d'),{
+    type:'line',
+    data:{labels:days,datasets:[{data:depData,borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.4,pointBackgroundColor:'#2563EB',pointRadius:4,borderWidth:2.5}]},
+    options:chartDefaults
+  });
+  
+  if (withdrawChart) withdrawChart.destroy();
+  withdrawChart = new Chart(document.getElementById('withdrawChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:days,datasets:[{data:wdData,backgroundColor:'rgba(239,68,68,.15)',borderColor:'#EF4444',borderWidth:2,borderRadius:6}]},
+    options:chartDefaults
+  });
+}
+
+// ===== RECENT ACTIVITY =====
+function renderRecentActivity(deposits, withdrawals, users) {
+  const all = [
+    ...deposits.slice(0,5).map(d=>({...d,atype:'dep'})),
+    ...withdrawals.slice(0,3).map(w=>({...w,atype:'wd'})),
+    ...users.slice(0,3).map(u=>({...u,atype:'reg'}))
+  ].sort((a,b)=>(b.created_at||0)-(a.created_at||0)).slice(0,8);
+  
+  document.getElementById('recentActivity').innerHTML = all.map(a=>`
+    <div class="act-item">
+      <div class="act-dot ${a.atype}">
+        <i class="fa-solid fa-${a.atype==='dep'?'arrow-down-to-line':a.atype==='wd'?'arrow-up-from-bracket':'user-plus'}"></i>
+      </div>
+      <div class="act-body">
+        <div class="act-title">${a.atype==='dep'?'Deposit '+(a.username||''):a.atype==='wd'?'Withdraw '+(a.username||''):'User Baru: '+(a.username||'')}</div>
+        <div class="act-sub">${a.created_at ? new Date(a.created_at).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</div>
+      </div>
+      <div class="act-right">
+        ${a.amount?`<div class="act-amount ${a.atype==='dep'?'plus':'minus'}">${a.atype==='dep'?'+':'-'}${formatIDR(a.amount)}</div>`:'<div class="act-amount" style="color:var(--success)">Bergabung</div>'}
+        ${a.status?`<div style="margin-top:3px"><span class="badge bg-${a.status==='success'?'success':a.status==='pending'?'pending':'danger'}">${a.status}</span></div>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== USERS =====
+async function loadUsers() {
+  try {
+    const res = await axios.get('/api/admin/listuser?limit=200',{headers:{'x-api-key':adminToken}});
+    allUsers = res.data.data||[]; renderUsers();
+  } catch(e) { console.error(e); document.getElementById('usersList').innerHTML = '<tr><td colspan="4">Gagal memuat user</td></tr>'; }
+}
+function renderUsers() {
+  const search = document.getElementById('searchUser')?.value.toLowerCase()||'';
+  const filtered = allUsers.filter(u=>u.username.toLowerCase().includes(search)).slice(0,100);
+  document.getElementById('usersList').innerHTML = filtered.map(u=>`
+    <tr>
+      <td style="color:var(--text4)">#${u.id}</td>
+      <td><strong>${u.username}</strong></td>
+      <td style="color:var(--primary);font-weight:800">${formatIDR(u.balance||0)}</td>
+      <td>
+        <button class="action-btn btn-add" onclick="openModal('${u.username}','add',${u.id})"><i class="fa-solid fa-plus"></i> Tambah</button>
+        <button class="action-btn btn-sub" onclick="openModal('${u.username}','sub',${u.id})"><i class="fa-solid fa-minus"></i> Kurang</button>
+       </td>
+     </tr>
+  `).join('');
+}
+function filterUsers(){ renderUsers(); }
+
+// ===== DEPOSITS =====
+async function loadDeposits() {
+  try {
+    const res = await axios.get('/api/admin/deposit/list?limit=500',{headers:{'x-api-key':adminToken}});
+    allDeposits = (res.data.data||[]).filter(d => !isNaN(new Date(d.created_at).getTime()));
+    renderDeposits();
+  } catch(e){ console.error(e); document.getElementById('depositsList').innerHTML = '<tr><td colspan="6">Gagal memuat deposit</td></tr>'; }
+}
+function setDepFilter(el,f){
+  document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active'); depositFilter=f; renderDeposits();
+}
+function renderDeposits() {
+  let data = depositFilter==='all'?allDeposits:allDeposits.filter(d=>d.status===depositFilter);
+  data = [...data].sort((a,b)=>new Date(b.created_at) - new Date(a.created_at)).slice(0,100);
+  document.getElementById('depositsList').innerHTML = data.map(d=>`
+    <tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--text4)">${d.id}</td>
+      <td><strong>${d.username||'—'}</strong></td>
+      <td style="font-weight:800">${formatIDR(d.amount)}</td>
+      <td>${formatIDR(d.total_payment)}</td>
+      <td><span class="badge bg-${d.status==='success'?'success':d.status==='pending'?'pending':'danger'}">${d.status}</span></td>
+      <td style="color:var(--text3);font-size:12px">${new Date(d.created_at).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+     </tr>
+  `).join('');
+}
+
+// ===== WITHDRAWALS =====
+async function loadWithdrawals() {
+  try {
+    const res = await axios.get('/api/admin/withdrawals/list?limit=500',{headers:{'x-api-key':adminToken}});
+    allWithdrawals = (res.data.data||[]).filter(w => !isNaN(new Date(w.created_at).getTime()));
+    renderWithdrawals();
+  } catch(e){ console.error(e); document.getElementById('withdrawalsList').innerHTML = '<tr><td colspan="9">Gagal memuat penarikan</td></tr>'; }
+}
+function renderWithdrawals() {
+  const data = [...allWithdrawals].sort((a,b)=>new Date(b.created_at) - new Date(a.created_at)).slice(0,100);
+  document.getElementById('withdrawalsList').innerHTML = data.map(w=>`
+    <tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--text4)">${w.id}</td>
+      <td><strong>${w.username||'—'}</strong></td>
+      <td style="font-weight:800">${formatIDR(w.amount)}</td>
+      <td style="color:var(--danger)">${formatIDR(w.fee)}</td>
+      <td style="color:var(--success);font-weight:800">${formatIDR(w.total_diterima)}</td>
+      <td><span class="badge bg-info" style="background:#DBEAFE;color:#1D4ED8">${w.operator||'—'}</span></td>
+      <td style="font-family:monospace">${w.account_number||'—'}</td>
+      <td><span class="badge bg-${w.status==='success'?'success':w.status==='pending'?'pending':'danger'}">${w.status}</span></td>
+      <td style="color:var(--text3);font-size:12px">${new Date(w.created_at).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+     </tr>
+  `).join('');
+}
+
+// ===== MODAL BALANCE (tidak diubah) =====
+function openModal(username, action, userId) {
+  modalUser=username; modalAction=action; modalUserId=userId;
+  document.getElementById('modalTitle').textContent = action==='add'?'➕ Tambah Saldo':'➖ Kurangi Saldo';
+  document.getElementById('modalUsername').textContent = username;
+  document.getElementById('modalAmount').value='';
+  document.getElementById('balanceModal').classList.add('active');
+}
+function closeModal(){ document.getElementById('balanceModal').classList.remove('active'); }
+document.getElementById('balanceModal').onclick = e => { if(e.target===document.getElementById('balanceModal')) closeModal(); };
+
+document.getElementById('modalConfirmBtn').onclick = async () => {
+  const amount = parseInt(document.getElementById('modalAmount').value);
+  if (!amount||amount<=0){alert('Masukkan nominal valid!');return;}
+  const btn = document.getElementById('modalConfirmBtn'); const orig=btn.textContent;
+  btn.disabled=true; btn.textContent='Memproses...';
+  try {
+    const endpoint = modalAction==='add' ? `/api/admin/addsaldo?userid=${modalUser}&nominal=${amount}` : `/api/admin/delsaldo?userid=${modalUser}&nominal=${amount}`;
+    await axios.get(endpoint,{headers:{'x-api-key':adminToken}});
+    alert(`✅ Saldo berhasil ${modalAction==='add'?'ditambahkan':'dikurangi'}!`);
+    closeModal(); loadUsers(); loadDashboard();
+  } catch(e){ alert('Gagal: '+(e.response?.data?.error||e.message)); }
+  finally { btn.disabled=false; btn.textContent=orig; }
+};
+</script>
+</body>
+</html>
