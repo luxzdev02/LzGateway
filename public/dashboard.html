@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Dashboard - Lz Gateway</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ---- Page-specific overrides (tambahan untuk grafik) ---- */
+    .quick-menu{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+    .quick-menu-item{
+      background:var(--surface);border-radius:var(--radius);
+      padding:16px 8px;text-align:center;cursor:pointer;
+      border:1px solid rgba(37,99,235,.07);box-shadow:var(--shadow-sm);
+      transition:var(--transition);text-decoration:none;
+      animation:cardStagger .5s ease both;
+    }
+    .quick-menu-item:nth-child(1){animation-delay:.05s}
+    .quick-menu-item:nth-child(2){animation-delay:.10s}
+    .quick-menu-item:nth-child(3){animation-delay:.15s}
+    .quick-menu-item:nth-child(4){animation-delay:.20s}
+    .quick-menu-item:active{transform:scale(.93)}
+    .quick-menu-item i{
+      font-size:22px;display:block;margin:0 auto 8px;
+      width:44px;height:44px;border-radius:13px;
+      display:flex;align-items:center;justify-content:center;
+      background:var(--primary-xlight);color:var(--primary);
+    }
+    .quick-menu-item span{font-size:11px;font-weight:700;color:var(--text2)}
+    .section-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+    .see-all{font-size:12px;font-weight:700;color:var(--primary);cursor:pointer}
+    .empty-state{text-align:center;padding:30px 20px;color:var(--text4)}
+    .empty-state i{font-size:40px;margin-bottom:12px;display:block;opacity:.4}
+    .empty-state p{font-size:13px;font-weight:600}
+    .online-dot{width:8px;height:8px;background:#10B981;border-radius:50%;display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* Style untuk card grafik (baru) */
+    .chart-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(37,99,235,.06);
+      box-shadow: var(--shadow-sm);
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chart-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-title i {
+      color: var(--primary);
+    }
+    .trend-badge {
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text2);
+    }
+    .trend-badge.up { background: #dcfce7; color: #15803d; }
+    .trend-badge.down { background: #fee2e2; color: #b91c1c; }
+    canvas { max-height: 200px; width: 100% !important; }
+  </style>
+</head>
+<body>
+<!-- Mobile Header -->
+<div class="mobile-header">
+  <button class="header-btn" id="openSidebar"><i class="fa-solid fa-bars-staggered"></i></button>
+  <span class="brand">Lz Gateway</span>
+  <a href="/chat" class="header-btn"><i class="fa-solid fa-comment-dots"></i></a>
+</div>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="close-sidebar" id="closeSidebar"><i class="fa-solid fa-xmark"></i></button>
+    <img src="https://files.catbox.moe/55tni5.png" alt="Logo" class="sidebar-logo">
+    <div class="sidebar-brand">Lz Gateway</div>
+    <div class="sidebar-sub">H2H Payment Gateway</div>
+  </div>
+  <div class="nav-menu">
+    <a href="/dashboard" class="nav-item active"><i class="fa-solid fa-house"></i> Dashboard</a>
+    <a href="/deposit" class="nav-item"><i class="fa-solid fa-wallet"></i> Deposit</a>
+    <a href="/withdraw" class="nav-item"><i class="fa-solid fa-money-bill-transfer"></i> Withdraw</a>
+    <a href="/riwayat" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</a>
+    <div class="nav-divider"></div>
+    <a href="/profile" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profile & API</a>
+    <a href="/docs" class="nav-item"><i class="fa-solid fa-book"></i> Dokumentasi</a>
+    <a href="/chat" class="nav-item"><i class="fa-solid fa-headset"></i> CS Web</a>
+    <div class="nav-divider"></div>
+    <div class="nav-item nav-logout" id="logoutBtn"><i class="fa-solid fa-sign-out-alt"></i> Keluar Akun</div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+  <!-- Hero Balance Card -->
+  <div class="hero-card">
+    <div class="hero-greeting">Halo, Selamat Datang 👋</div>
+    <div class="hero-name" id="disp_username">User</div>
+    <div class="hero-balance-label"><span class="online-dot"></span>Saldo Aktif</div>
+    <div class="hero-balance-amount" id="disp_balance">Rp 0</div>
+    <div class="hero-actions">
+      <a href="/deposit" class="hero-action-btn"><i class="fa-solid fa-plus"></i> Deposit</a>
+      <a href="/withdraw" class="hero-action-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i> Withdraw</a>
+      <a href="/riwayat" class="hero-action-btn"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</a>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-icon"><i class="fa-solid fa-arrow-down-to-line"></i></div>
+      <div class="stat-card-label">Total Deposit</div>
+      <div class="stat-card-value" id="disp_total_dep">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon danger"><i class="fa-solid fa-arrow-up-from-bracket"></i></div>
+      <div class="stat-card-label">Total Withdraw</div>
+      <div class="stat-card-value" id="disp_total_wd">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon success"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-card-label">Status Akun</div>
+      <div class="stat-card-value text-success" style="font-size:14px">✓ Aktif</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon info"><i class="fa-solid fa-at"></i></div>
+      <div class="stat-card-label">Username</div>
+      <div class="stat-card-value" id="disp_user_id" style="font-size:14px">@user</div>
+    </div>
+  </div>
+
+  <!-- ========== TAMBAHAN: GRAFIK & STATISTIK BULANAN ========== -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title">
+        <i class="fa-solid fa-chart-line"></i> Tren Transaksi (30 Hari)
+      </div>
+      <div class="trend-badge" id="trendIndicator">Memuat...</div>
+    </div>
+    <canvas id="monthlyChart" width="400" height="180"></canvas>
+    <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 11px; font-weight: 600; color: var(--text3);">
+      <span><i class="fa-solid fa-circle" style="color: #0061ff;"></i> Deposit</span>
+      <span><i class="fa-solid fa-circle" style="color: #ef4444;"></i> Withdraw</span>
+      <span id="monthInfo">Bulan ini vs bulan lalu</span>
+    </div>
+  </div>
+  <!-- ========================================================= -->
+
+  <!-- Quick Menu -->
+  <div class="section-title">Menu Cepat</div>
+  <div class="quick-menu">
+    <a href="/deposit" class="quick-menu-item"><i class="fa-solid fa-wallet"></i><span>Deposit</span></a>
+    <a href="/withdraw" class="quick-menu-item"><i class="fa-solid fa-money-bill-transfer"></i><span>Withdraw</span></a>
+    <a href="/riwayat" class="quick-menu-item"><i class="fa-solid fa-list-ul"></i><span>Riwayat</span></a>
+    <a href="/profile" class="quick-menu-item"><i class="fa-solid fa-key"></i><span>API Key</span></a>
+  </div>
+
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-icon"><i class="fa-solid fa-key"></i></div>
+      Developer API Key
+    </div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:12px;font-weight:500">Kunci untuk integrasi H2H. Jaga kerahasiaannya.</p>
+    <div class="api-box">
+      <input type="text" id="disp_apikey" value="Loading..." readonly>
+      <button class="copy-btn" onclick="copyKey()"><i class="fa-solid fa-copy"></i> Salin</button>
+    </div>
+  </div>
+
+  <!-- Transaksi Terbaru -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+      <span>Transaksi Terbaru</span>
+      <a href="/riwayat" class="see-all" style="margin-left:auto">Lihat Semua</a>
+    </div>
+    <div id="recentTrx">
+      <!-- Skeleton -->
+      <div class="skeleton skeleton-card" style="height:60px;margin-bottom:8px"></div>
+      <div class="skeleton skeleton-card" style="height:60px;margin-bottom:8px"></div>
+      <div class="skeleton skeleton-card" style="height:60px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="/dashboard" class="bottom-nav-item active"><i class="fa-solid fa-house"></i><span>Home</span></a>
+  <a href="/deposit" class="bottom-nav-center"><i class="fa-solid fa-plus"></i></a>
+  <a href="/riwayat" class="bottom-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+  <a href="/profile" class="bottom-nav-item"><i class="fa-solid fa-user"></i><span>Profil</span></a>
+</nav>
+
+<script>
+let currentUser = null;
+let monthlyChart = null;
+
+// Sidebar
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebarOverlay');
+document.getElementById('openSidebar').onclick = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
+document.getElementById('closeSidebar').onclick = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
+overlay.onclick = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
+
+function formatIDR(n) {
+  return new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', minimumFractionDigits:0 }).format(n || 0);
+}
+
+// Fungsi untuk menghitung data 30 hari terakhir dan tren bulanan
+function processMonthlyData(deposits, withdrawals) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 29); // 30 hari termasuk hari ini
+  
+  const labels = [];
+  const depData = [];
+  const wdData = [];
+  
+  // Inisialisasi array untuk 30 hari
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(thirtyDaysAgo);
+    date.setDate(thirtyDaysAgo.getDate() + i);
+    labels.push(date.toLocaleDateString('id-ID', { day:'numeric', month:'short' }));
+    depData.push(0);
+    wdData.push(0);
+  }
+  
+  // Isi deposit success
+  deposits.forEach(d => {
+    if (d.status !== 'success') return;
+    const date = new Date(d.created_at);
+    if (isNaN(date.getTime())) return;
+    date.setHours(0,0,0,0);
+    const diffDays = Math.floor((date - thirtyDaysAgo) / (1000*60*60*24));
+    if (diffDays >= 0 && diffDays < 30) {
+      depData[diffDays] += (d.amount || 0);
+    }
+  });
+  
+  // Isi withdraw success
+  withdrawals.forEach(w => {
+    if (w.status !== 'success') return;
+    const date = new Date(w.created_at);
+    if (isNaN(date.getTime())) return;
+    date.setHours(0,0,0,0);
+    const diffDays = Math.floor((date - thirtyDaysAgo) / (1000*60*60*24));
+    if (diffDays >= 0 && diffDays < 30) {
+      wdData[diffDays] += (w.amount || 0);
+    }
+  });
+  
+  return { labels, depData, wdData };
+}
+
+// Hitung total bulan ini vs bulan lalu (hanya success)
+function getMonthlyComparison(deposits, withdrawals) {
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  
+  let thisMonthDep = 0, thisMonthWd = 0;
+  let lastMonthDep = 0, lastMonthWd = 0;
+  
+  const addIfSuccess = (item, isDeposit) => {
+    if (item.status !== 'success') return;
+    const date = new Date(item.created_at);
+    if (isNaN(date.getTime())) return;
+    if (date >= thisMonthStart) {
+      if (isDeposit) thisMonthDep += (item.amount || 0);
+      else thisMonthWd += (item.amount || 0);
+    } else if (date >= lastMonthStart && date <= lastMonthEnd) {
+      if (isDeposit) lastMonthDep += (item.amount || 0);
+      else lastMonthWd += (item.amount || 0);
+    }
+  };
+  
+  deposits.forEach(d => addIfSuccess(d, true));
+  withdrawals.forEach(w => addIfSuccess(w, false));
+  
+  const totalThisMonth = thisMonthDep - thisMonthWd;
+  const totalLastMonth = lastMonthDep - lastMonthWd;
+  let percentChange = 0;
+  if (totalLastMonth !== 0) {
+    percentChange = ((totalThisMonth - totalLastMonth) / Math.abs(totalLastMonth)) * 100;
+  } else if (totalThisMonth > 0) {
+    percentChange = 100;
+  }
+  
+  return {
+    totalThisMonth: totalThisMonth,
+    totalLastMonth: totalLastMonth,
+    percentChange: percentChange,
+    isUp: percentChange >= 0
+  };
+}
+
+// Render grafik dan update tren
+function renderChart(deposits, withdrawals) {
+  const { labels, depData, wdData } = processMonthlyData(deposits, withdrawals);
+  const comparison = getMonthlyComparison(deposits, withdrawals);
+  
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  if (monthlyChart) monthlyChart.destroy();
+  
+  monthlyChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Deposit',
+          data: depData,
+          borderColor: '#0061ff',
+          backgroundColor: 'rgba(0,97,255,0.05)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 4,
+          tension: 0.2,
+          fill: true
+        },
+        {
+          label: 'Withdraw',
+          data: wdData,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.05)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 4,
+          tension: 0.2,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${formatIDR(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: (val) => formatIDR(val)
+          },
+          grid: { color: '#e2e8f0' }
+        },
+        x: {
+          ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8 }
+        }
+      }
+    }
+  });
+  
+  // Update trend badge
+  const trendEl = document.getElementById('trendIndicator');
+  const monthInfo = document.getElementById('monthInfo');
+  const arrow = comparison.isUp ? '▲' : '▼';
+  const colorClass = comparison.isUp ? 'up' : 'down';
+  const percent = Math.abs(comparison.percentChange).toFixed(1);
+  trendEl.className = `trend-badge ${colorClass}`;
+  trendEl.innerHTML = `${arrow} ${percent}% dari bulan lalu`;
+  
+  monthInfo.innerHTML = `Bulan ini: ${formatIDR(comparison.totalThisMonth)} | Bulan lalu: ${formatIDR(comparison.totalLastMonth)}`;
+}
+
+function renderTrx(deposits, withdrawals) {
+  const all = [
+    ...deposits.map(d => ({...d, type:'dep'})),
+    ...withdrawals.map(w => ({...w, type:'wd'}))
+  ].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,5);
+
+  const container = document.getElementById('recentTrx');
+  if (!all.length) {
+    container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Belum ada transaksi</p></div>';
+    return;
+  }
+  container.innerHTML = '<div class="trx-list">' + all.map(t => `
+    <div class="trx-item">
+      <div class="trx-icon ${t.type}">
+        <i class="fa-solid fa-${t.type==='dep'?'arrow-down-to-line':'arrow-up-from-bracket'}"></i>
+      </div>
+      <div class="trx-body">
+        <div class="trx-title">${t.type==='dep'?'Deposit QRIS':'Withdraw '+( t.operator||'')}</div>
+        <div class="trx-sub">${new Date(t.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>
+      <div class="trx-right">
+        <div class="trx-amount ${t.type==='dep'?'plus':'minus'}">${t.type==='dep'?'+':'-'}${formatIDR(t.amount)}</div>
+        <div style="margin-top:3px"><span class="badge badge-${t.status==='success'?'success':t.status==='pending'?'warning':'danger'}">${t.status}</span></div>
+      </div>
+    </div>
+  `).join('') + '</div>';
+}
+
+async function loadData() {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) { window.location.href = '/login'; return; }
+  currentUser = JSON.parse(userStr);
+
+  document.getElementById('disp_username').textContent = currentUser.username;
+  document.getElementById('disp_user_id').textContent = '@' + currentUser.username;
+  document.getElementById('disp_balance').textContent = formatIDR(currentUser.balance || 0);
+  document.getElementById('disp_apikey').value = currentUser.apiKey || 'Memuat...';
+
+  // FIX: sejak login gak lagi ngirim balik apiKey (demi keamanan), ambil di sini
+  // dari /api/user/:id (dilindungi cookie session) dan simpan ke localStorage
+  // biar gak perlu regenerate tiap kali padahal key lama masih valid.
+  try {
+    const meRes = await axios.get(`/api/user/${currentUser.id}`, { withCredentials: true });
+    if (meRes.data?.apiKey) {
+      currentUser.apiKey = meRes.data.apiKey;
+      currentUser.balance = meRes.data.balance;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      document.getElementById('disp_apikey').value = currentUser.apiKey;
+      document.getElementById('disp_balance').textContent = formatIDR(currentUser.balance || 0);
+    }
+  } catch(e) {
+    console.error('Gagal ambil apiKey:', e);
+    const status = e.response?.status || 'no-response';
+    const msg = e.response?.data?.error || e.message || 'unknown';
+    document.getElementById('disp_apikey').value = `ERROR ${status}: ${msg}`;
+  }
+
+  try {
+    const [depRes, wdRes] = await Promise.all([
+      axios.get(`/api/history/deposits/${currentUser.id}`),
+      axios.get(`/api/history/withdrawals/${currentUser.id}`)
+    ]);
+    const deps = depRes.data || [];
+    const wds = wdRes.data || [];
+
+    const totalDep = deps.filter(d=>d.status==='success').reduce((s,d)=>s+d.amount,0);
+    const totalWd = wds.filter(w=>w.status==='success').reduce((s,w)=>s+w.amount,0);
+
+    document.getElementById('disp_total_dep').textContent = formatIDR(totalDep);
+    document.getElementById('disp_total_wd').textContent = formatIDR(totalWd);
+    renderTrx(deps, wds);
+    
+    // Tampilkan grafik dan statistik bulanan
+    renderChart(deps, wds);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('recentTrx').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Gagal memuat data</p></div>';
+    const canvasCtx = document.getElementById('monthlyChart')?.getContext('2d');
+    if (canvasCtx) {
+      canvasCtx.font = '12px sans-serif';
+      canvasCtx.fillStyle = '#ef4444';
+      canvasCtx.fillText('Gagal memuat grafik', 10, 50);
+    }
+  }
+}
+
+function copyKey() {
+  const v = document.getElementById('disp_apikey').value;
+  navigator.clipboard.writeText(v).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Tersalin';
+    setTimeout(() => btn.innerHTML = '<i class="fa-solid fa-copy"></i> Salin', 2000);
+  });
+}
+
+document.getElementById('logoutBtn').onclick = () => {
+  if (confirm('Yakin ingin keluar?')) { localStorage.removeItem('user'); window.location.href = '/login'; }
+};
+
+loadData();
+
+// Auto refresh saldo
+setInterval(async () => {
+  if (!currentUser) return;
+  try {
+    const res = await axios.get(`/api/user/${currentUser.id}`);
+    if (res.data) {
+      document.getElementById('disp_balance').textContent = formatIDR(res.data.balance);
+      currentUser.balance = res.data.balance;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+    }
+  } catch(e) {}
+}, 30000);
+</script>
+</body>
+</html>
